@@ -1,4 +1,4 @@
-package main
+package test
 
 type Fuel struct {
 	Type   string
