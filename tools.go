@@ -62,10 +62,42 @@ type Arg struct {
 	Type ast.Expr
 }
 
+func (arg *Arg) IsError() bool {
+	return arg.Type.(*ast.Ident).Name == "error"
+}
+
 type Method struct {
 	Name string
 	In   []Arg
 	Out  []Arg
+}
+
+func (m *Method) HasInput() bool {
+	return len(m.In) > 0
+}
+
+func (m *Method) HasOutput() bool {
+	return len(m.Out) > 0
+}
+
+func (m *Method) ErrorOutputs() []Arg {
+	var args []Arg
+	for _, arg := range m.Out {
+		if arg.IsError() {
+			args = append(args, arg)
+		}
+	}
+	return args
+}
+
+func (m *Method) NonErrorOutputs() []Arg {
+	var args []Arg
+	for _, arg := range m.Out {
+		if !arg.IsError() {
+			args = append(args, arg)
+		}
+	}
+	return args
 }
 
 type Interface struct {

@@ -54,6 +54,10 @@ func TestInterfacesFile(t *testing.T) {
 	assert.EqualValues(t, []string{"Land", "IsLanded", "Aircraft", "Launch"}, names)
 	assert.NotNil(t, list[0].Method("IsLanded"))
 	assert.Nil(t, list[0].Method("Nothing"))
+
+	args := list[0].Method("Launch").Out
+	assert.False(t, args[0].IsError())
+	assert.True(t, args[1].IsError())
 }
 
 func ExampleStructsFile() {
