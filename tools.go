@@ -63,7 +63,8 @@ type Arg struct {
 }
 
 func (arg *Arg) IsError() bool {
-	return arg.Type.(*ast.Ident).Name == "error"
+	v, ok := arg.Type.(*ast.Ident)
+	return ok && v.Name == "error"
 }
 
 type Method struct {
