@@ -91,6 +91,41 @@ func (in *Interface) Method(name string) *Method {
 	return nil
 }
 
+type File struct {
+	Package    string
+	Interfaces []Interface
+	Structs    []Struct
+	Printer    *Printer
+}
+
+func Scan(filename string) (*File, error) {
+	tokens := token.NewFileSet()
+	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors)
+	if err != nil {
+		return nil, err
+	}
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	var structs []Struct
+	for _, node := range file.Decls {
+		structs = append(structs, Structs(node)...)
+	}
+	var interfaces []Interface
+	for _, node := range file.Decls {
+		interfaces = append(interfaces, Interfaces(node)...)
+	}
+
+	return &File{
+		Package:    file.Name.Name,
+		Printer:    &Printer{string(content)},
+		Structs:    structs,
+		Interfaces: interfaces,
+	}, nil
+
+}
+
 func InterfacesFile(filename string) ([]Interface, *Printer, error) {
 	tokens := token.NewFileSet()
 	content, err := ioutil.ReadFile(filename)

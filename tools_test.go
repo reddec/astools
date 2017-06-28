@@ -21,6 +21,24 @@ func TestStructsFile_fail(t *testing.T) {
 	assert.True(t, os.IsNotExist(err))
 }
 
+func TestScan(t *testing.T) {
+	file, err := Scan("test/sample.go")
+	assert.Nil(t, err, "Failed open sample file")
+	assert.Equal(t, "sample", file.Package)
+	assert.Equal(t, len(file.Structs), 2)
+	assert.Equal(t, "Fuel", file.Structs[0].Name)
+	assert.Equal(t, "Rocket", file.Structs[1].Name)
+	assert.Len(t, file.Interfaces, 1)
+	assert.Equal(t, "Control", file.Interfaces[0].Name)
+	var names []string
+	for _, m := range file.Interfaces[0].Methods {
+		names = append(names, m.Name)
+	}
+	assert.EqualValues(t, []string{"Land", "IsLanded", "Aircraft", "Launch"}, names)
+	assert.NotNil(t, file.Interfaces[0].Method("IsLanded"))
+	assert.Nil(t, file.Interfaces[0].Method("Nothing"))
+}
+
 func TestInterfacesFile(t *testing.T) {
 	list, p, err := InterfacesFile("test/sample.go")
 	assert.Nil(t, err)
