@@ -58,13 +58,18 @@ func Structs(decls ...ast.Node) []Struct {
 }
 
 type Arg struct {
-	Name string
-	Type ast.Expr
+	Name    string
+	Type    ast.Expr
+	printer *Printer
 }
 
 func (arg *Arg) IsError() bool {
 	v, ok := arg.Type.(*ast.Ident)
 	return ok && v.Name == "error"
+}
+
+func (arg *Arg) ToGolang() string {
+	return arg.printer.ToString(arg.Type)
 }
 
 type Method struct {
@@ -126,6 +131,7 @@ func (in *Interface) Method(name string) *Method {
 
 type File struct {
 	Package    string
+	Imports    map[string]string
 	Interfaces []Interface
 	Structs    []Struct
 	Printer    *Printer
@@ -141,20 +147,32 @@ func Scan(filename string) (*File, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	printer := &Printer{string(content)}
+
 	var structs []Struct
 	for _, node := range file.Decls {
 		structs = append(structs, Structs(node)...)
 	}
 	var interfaces []Interface
 	for _, node := range file.Decls {
-		interfaces = append(interfaces, Interfaces(node)...)
+		interfaces = append(interfaces, Interfaces(printer, node)...)
 	}
 
+	imports := make(map[string]string)
+	for _, imp := range file.Imports {
+		alias := ""
+		if imp.Name != nil {
+			alias = imp.Name.Name
+		}
+		imports[imp.Path.Value] = alias
+	}
 	return &File{
 		Package:    file.Name.Name,
-		Printer:    &Printer{string(content)},
+		Printer:    printer,
 		Structs:    structs,
 		Interfaces: interfaces,
+		Imports:    imports,
 	}, nil
 
 }
@@ -165,18 +183,19 @@ func InterfacesFile(filename string) ([]Interface, *Printer, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	printer := &Printer{string(content)}
 	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors)
 	if err != nil {
 		return nil, nil, err
 	}
 	var res []Interface
 	for _, node := range file.Decls {
-		res = append(res, Interfaces(node)...)
+		res = append(res, Interfaces(printer, node)...)
 	}
 	return res, &Printer{string(content)}, nil
 }
 
-func Interfaces(decls ...ast.Node) []Interface {
+func Interfaces(printer *Printer, decls ...ast.Node) []Interface {
 	var res []Interface
 	var stack []ast.Node
 	var name string
@@ -195,7 +214,7 @@ func Interfaces(decls ...ast.Node) []Interface {
 		case *ast.InterfaceType:
 			iface := Interface{Name: name, Definition: v}
 			for _, m := range v.Methods.List {
-				iface.Methods = append(iface.Methods, AsMethod(m))
+				iface.Methods = append(iface.Methods, AsMethod(m, printer))
 			}
 			res = append(res, iface)
 		case *ast.GenDecl:
@@ -207,16 +226,18 @@ func Interfaces(decls ...ast.Node) []Interface {
 	return res
 }
 
-func AsMethod(m *ast.Field) Method {
+func AsMethod(m *ast.Field, printer *Printer) Method {
 	method := Method{Name: m.Names[0].Name}
 	def := m.Type.(*ast.FuncType)
 	if def.Params != nil {
 		for i, p := range def.Params.List {
-			name := fmt.Sprintf("arg%v", i)
 			if p.Names != nil {
-				name = p.Names[0].Name
+				for _, name := range p.Names {
+					method.In = append(method.In, Arg{name.Name, p.Type, printer})
+				}
+			} else {
+				method.In = append(method.In, Arg{fmt.Sprintf("arg%v", i), p.Type, printer})
 			}
-			method.In = append(method.In, Arg{name, p.Type})
 		}
 	}
 	if def.Results != nil {
@@ -225,7 +246,7 @@ func AsMethod(m *ast.Field) Method {
 			if p.Names != nil {
 				name = p.Names[0].Name
 			}
-			method.Out = append(method.Out, Arg{name, p.Type})
+			method.Out = append(method.Out, Arg{name, p.Type, printer})
 		}
 	}
 	return method
