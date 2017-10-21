@@ -68,7 +68,7 @@ func (arg *Arg) IsError() bool {
 	return ok && v.Name == "error"
 }
 
-func (arg *Arg) ToGolang() string {
+func (arg *Arg) GolangType() string {
 	return arg.printer.ToString(arg.Type)
 }
 
