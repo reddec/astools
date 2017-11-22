@@ -6,11 +6,12 @@ import (
 	"go/token"
 	"fmt"
 	"io/ioutil"
+	"encoding/json"
 )
 
 type Struct struct {
 	Name       string
-	Definition *ast.StructType
+	Definition *ast.StructType `json:"-"`
 }
 
 func StructsFile(filename string) ([]Struct, *Printer, error) {
@@ -63,6 +64,19 @@ type Arg struct {
 	printer *Printer
 }
 
+func (u *Arg) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Name       string
+		GolangType string
+		IsError    bool
+	}{
+
+		Name:       u.Name,
+		GolangType: u.GolangType(),
+		IsError:    u.IsError(),
+	})
+}
+
 func (arg *Arg) IsError() bool {
 	v, ok := arg.Type.(*ast.Ident)
 	return ok && v.Name == "error"
@@ -74,8 +88,8 @@ func (arg *Arg) GolangType() string {
 
 type Method struct {
 	Name string
-	In   []Arg
-	Out  []Arg
+	In   []Arg `json:",omitempty"`
+	Out  []Arg `json:",omitempty"`
 }
 
 func (m *Method) HasInput() bool {
@@ -108,8 +122,8 @@ func (m *Method) NonErrorOutputs() []Arg {
 
 type Interface struct {
 	Name       string
-	Methods    []Method
-	Definition *ast.InterfaceType
+	Methods    []Method           `json:",omitempty"`
+	Definition *ast.InterfaceType `json:"-"`
 }
 
 type Printer struct {
@@ -131,10 +145,10 @@ func (in *Interface) Method(name string) *Method {
 
 type File struct {
 	Package    string
-	Imports    map[string]string
-	Interfaces []Interface
-	Structs    []Struct
-	Printer    *Printer
+	Imports    map[string]string `json:",omitempty"`
+	Interfaces []Interface       `json:",omitempty"`
+	Structs    []Struct          `json:",omitempty"`
+	Printer    *Printer          `json:"-"`
 }
 
 func Scan(filename string) (*File, error) {
