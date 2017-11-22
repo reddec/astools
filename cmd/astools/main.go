@@ -1,4 +1,4 @@
-package main
+package astools
 
 import (
 	"gopkg.in/alecthomas/kingpin.v2"
