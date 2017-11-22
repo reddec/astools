@@ -7,7 +7,8 @@ import (
 	"os"
 	"encoding/json"
 	"text/template"
-	"strings"
+	"github.com/Masterminds/sprig"
+	"io/ioutil"
 )
 
 func main() {
@@ -34,21 +35,15 @@ func main() {
 		if err != nil {
 			log.Fatal("scan:", err)
 		}
-		templ, err := template.ParseFiles(*genTemplFile)
+		templateContent, err := ioutil.ReadFile(*genTemplFile)
+		if err != nil {
+			log.Fatal("read template:", err)
+		}
+		templ, err := template.New(*genTemplFile).Funcs(sprig.TxtFuncMap()).Parse(string(templateContent))
 		if err != nil {
 			log.Fatal("parse:", err)
 		}
-		var env = make(map[string]string)
-		for _, item := range os.Environ() {
-			kv := strings.SplitN(item, "=", 2)
-			if len(kv) == 2 {
-				env[kv[0]] = kv[1]
-			}
-		}
-		err = templ.Execute(os.Stdout, map[string]interface{}{
-			"Env": env,
-			"Go":  data,
-		})
+		err = templ.Execute(os.Stdout, data)
 		if err != nil {
 			log.Fatal("render:", err)
 		}

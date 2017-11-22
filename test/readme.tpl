@@ -1,3 +1,6 @@
-{{range .Go.Interfaces }}
-## {{$.Go.Package}}.{{.Name}}
+{{range .Interfaces }}
+
+Path: {{ env "PATH"}}
+
+## {{$.Package}}.{{.Name}}
 {{end}}
