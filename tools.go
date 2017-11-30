@@ -239,6 +239,10 @@ func Interfaces(printer *Printer, decls ...ast.Node) []Interface {
 		case *ast.InterfaceType:
 			iface := Interface{Name: name, Definition: v, Comment: lastComment}
 			for _, m := range v.Methods.List {
+				// skip anonym method - in progress
+				if len(m.Names) == 0 {
+					continue
+				}
 				iface.Methods = append(iface.Methods, AsMethod(m, printer))
 			}
 			res = append(res, iface)
@@ -253,7 +257,9 @@ func Interfaces(printer *Printer, decls ...ast.Node) []Interface {
 }
 
 func AsMethod(m *ast.Field, printer *Printer) Method {
-	method := Method{Name: m.Names[0].Name, Comment: joinComments(printer.CommentMap[m])}
+	var name string
+	name = m.Names[0].Name
+	method := Method{Name: name, Comment: joinComments(printer.CommentMap[m])}
 	def := m.Type.(*ast.FuncType)
 	if def.Params != nil {
 		method.In = getArgs(printer, def.Params.List)
