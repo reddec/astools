@@ -11,12 +11,15 @@ import (
 
 type Struct struct {
 	Name       string
+	Comment    string          `json:",omitempty"`
+	Fields     []Arg
 	Definition *ast.StructType `json:"-"`
+	printer    *Printer        `json:"-"`
 }
 
 func StructsFile(filename string) ([]Struct, *Printer, error) {
 	tokens := token.NewFileSet()
-	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors)
+	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors|parser.ParseComments)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -24,14 +27,15 @@ func StructsFile(filename string) ([]Struct, *Printer, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	printer := &Printer{string(content), ast.NewCommentMap(tokens, file, file.Comments)}
 	var res []Struct
 	for _, node := range file.Decls {
-		res = append(res, Structs(node)...)
+		res = append(res, Structs(printer, node)...)
 	}
-	return res, &Printer{string(content)}, nil
+	return res, printer, nil
 }
 
-func Structs(decls ...ast.Node) []Struct {
+func Structs(printer *Printer, decls ...ast.Node) []Struct {
 	var res []Struct
 	var stack []ast.Node
 	var name string
@@ -39,6 +43,7 @@ func Structs(decls ...ast.Node) []Struct {
 		stack = append(stack, decls[i])
 	}
 
+	var lastComment string
 	for len(stack) > 0 {
 		node := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
@@ -48,8 +53,9 @@ func Structs(decls ...ast.Node) []Struct {
 			name = v.Name.Name
 			stack = append(stack, v.Type)
 		case *ast.StructType:
-			res = append(res, Struct{name, v})
+			res = append(res, Struct{name, lastComment, getArgs(printer, v.Fields.List), v, printer,})
 		case *ast.GenDecl:
+			lastComment = joinComments(printer.CommentMap[v])
 			for _, spec := range v.Specs {
 				stack = append(stack, spec)
 			}
@@ -61,6 +67,7 @@ func Structs(decls ...ast.Node) []Struct {
 type Arg struct {
 	Name    string
 	Type    ast.Expr
+	Comment string
 	printer *Printer
 }
 
@@ -68,11 +75,13 @@ func (u *Arg) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Name       string
 		GolangType string
+		Comment    string `json:",omitempty"`
 		IsError    bool
 	}{
 
 		Name:       u.Name,
 		GolangType: u.GolangType(),
+		Comment:    u.Comment,
 		IsError:    u.IsError(),
 	})
 }
@@ -87,9 +96,10 @@ func (arg *Arg) GolangType() string {
 }
 
 type Method struct {
-	Name string
-	In   []Arg `json:",omitempty"`
-	Out  []Arg `json:",omitempty"`
+	Name    string
+	Comment string `json:",omitempty"`
+	In      []Arg  `json:",omitempty"`
+	Out     []Arg  `json:",omitempty"`
 }
 
 func (m *Method) HasInput() bool {
@@ -123,11 +133,13 @@ func (m *Method) NonErrorOutputs() []Arg {
 type Interface struct {
 	Name       string
 	Methods    []Method           `json:",omitempty"`
+	Comment    string             `json:",omitempty"`
 	Definition *ast.InterfaceType `json:"-"`
 }
 
 type Printer struct {
-	Src string
+	Src        string
+	CommentMap ast.CommentMap
 }
 
 func (p *Printer) ToString(node ast.Node) string {
@@ -153,7 +165,7 @@ type File struct {
 
 func Scan(filename string) (*File, error) {
 	tokens := token.NewFileSet()
-	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors)
+	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors|parser.ParseComments)
 	if err != nil {
 		return nil, err
 	}
@@ -162,11 +174,11 @@ func Scan(filename string) (*File, error) {
 		return nil, err
 	}
 
-	printer := &Printer{string(content)}
+	printer := &Printer{string(content), ast.NewCommentMap(tokens, file, file.Comments)}
 
 	var structs []Struct
 	for _, node := range file.Decls {
-		structs = append(structs, Structs(node)...)
+		structs = append(structs, Structs(printer, node)...)
 	}
 	var interfaces []Interface
 	for _, node := range file.Decls {
@@ -197,8 +209,8 @@ func InterfacesFile(filename string) ([]Interface, *Printer, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	printer := &Printer{string(content)}
-	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors)
+	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors|parser.ParseComments)
+	printer := &Printer{string(content), ast.NewCommentMap(tokens, file, file.Comments)}
 	if err != nil {
 		return nil, nil, err
 	}
@@ -206,7 +218,7 @@ func InterfacesFile(filename string) ([]Interface, *Printer, error) {
 	for _, node := range file.Decls {
 		res = append(res, Interfaces(printer, node)...)
 	}
-	return res, &Printer{string(content)}, nil
+	return res, printer, nil
 }
 
 func Interfaces(printer *Printer, decls ...ast.Node) []Interface {
@@ -216,22 +228,22 @@ func Interfaces(printer *Printer, decls ...ast.Node) []Interface {
 	for i := len(decls) - 1; i >= 0; i-- {
 		stack = append(stack, decls[i])
 	}
-
+	var lastComment string
 	for len(stack) > 0 {
 		node := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
-
 		switch v := node.(type) {
 		case *ast.TypeSpec:
 			name = v.Name.Name
 			stack = append(stack, v.Type)
 		case *ast.InterfaceType:
-			iface := Interface{Name: name, Definition: v}
+			iface := Interface{Name: name, Definition: v, Comment: lastComment}
 			for _, m := range v.Methods.List {
 				iface.Methods = append(iface.Methods, AsMethod(m, printer))
 			}
 			res = append(res, iface)
 		case *ast.GenDecl:
+			lastComment = joinComments(printer.CommentMap[v])
 			for _, spec := range v.Specs {
 				stack = append(stack, spec)
 			}
@@ -241,18 +253,10 @@ func Interfaces(printer *Printer, decls ...ast.Node) []Interface {
 }
 
 func AsMethod(m *ast.Field, printer *Printer) Method {
-	method := Method{Name: m.Names[0].Name}
+	method := Method{Name: m.Names[0].Name, Comment: joinComments(printer.CommentMap[m])}
 	def := m.Type.(*ast.FuncType)
 	if def.Params != nil {
-		for i, p := range def.Params.List {
-			if p.Names != nil {
-				for _, name := range p.Names {
-					method.In = append(method.In, Arg{name.Name, p.Type, printer})
-				}
-			} else {
-				method.In = append(method.In, Arg{fmt.Sprintf("arg%v", i), p.Type, printer})
-			}
-		}
+		method.In = getArgs(printer, def.Params.List)
 	}
 	if def.Results != nil {
 		for i, p := range def.Results.List {
@@ -260,8 +264,33 @@ func AsMethod(m *ast.Field, printer *Printer) Method {
 			if p.Names != nil {
 				name = p.Names[0].Name
 			}
-			method.Out = append(method.Out, Arg{name, p.Type, printer})
+			method.Out = append(method.Out, Arg{name, p.Type, joinComments(printer.CommentMap[p]), printer})
 		}
 	}
 	return method
+}
+
+func getArgs(printer *Printer, fields []*ast.Field) []Arg {
+	var ans []Arg
+	for i, p := range fields {
+		if p.Names != nil {
+			for _, name := range p.Names {
+				ans = append(ans, Arg{name.Name, p.Type, joinComments(printer.CommentMap[p]), printer})
+			}
+		} else {
+			ans = append(ans, Arg{fmt.Sprintf("arg%v", i), p.Type, joinComments(printer.CommentMap[p]), printer})
+		}
+	}
+	return ans
+}
+
+func joinComments(comments []*ast.CommentGroup) string {
+	var ans string
+	for _, c := range comments {
+		if ans != "" {
+			ans += "\n"
+		}
+		ans += c.Text()
+	}
+	return ans
 }

@@ -1,13 +1,18 @@
 package sample
 
+// BBBBBBBBBBB
 type Fuel struct {
 	Type   string
-	Amount float32
+	Amount float32 //AAAAAAAAA
 }
 
+// Rocket - This is a ROCKET!
+//adsasd
+//asdasd
 type Rocket struct {
-	Power int
+	Power int // This is power
 	Name  string
+	// inline
 	Direction struct {
 		X float32
 		Y float32
@@ -17,7 +22,9 @@ type Rocket struct {
 	V    []int
 }
 
+// Control?
 type Control interface {
+	//AA;;
 	Land()
 	IsLanded() (success bool)
 	Aircraft() (*Rocket)
