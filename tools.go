@@ -96,8 +96,11 @@ func (arg *Arg) GolangType() string {
 }
 
 type Value struct {
-	Arg
-	Value ast.Expr
+	Name    string
+	Type    ast.Expr
+	Comment string
+	printer *Printer
+	Value   ast.Expr
 }
 
 func (arg *Value) GolangValue() string {
@@ -119,6 +122,15 @@ func (u *Value) MarshalJSON() ([]byte, error) {
 		Comment:     u.Comment,
 		IsError:     u.IsError(),
 	})
+}
+
+func (arg *Value) IsError() bool {
+	v, ok := arg.Type.(*ast.Ident)
+	return ok && v.Name == "error"
+}
+
+func (arg *Value) GolangType() string {
+	return arg.printer.ToString(arg.Type)
 }
 
 type Method struct {
@@ -169,6 +181,9 @@ type Printer struct {
 }
 
 func (p *Printer) ToString(node ast.Node) string {
+	if node == nil {
+		return ""
+	}
 	return p.Src[node.Pos()-1:node.End()-1]
 }
 
@@ -185,10 +200,19 @@ type File struct {
 	Package    string
 	Comment    string
 	Imports    map[string]string
-	Values     map[string]Value
+	Values     []Value
 	Interfaces []Interface `json:",omitempty"`
 	Structs    []Struct    `json:",omitempty"`
 	Printer    *Printer    `json:"-"`
+}
+
+func (f *File) Value(name string) *Value {
+	for _, v := range f.Values {
+		if v.Name == name {
+			return &v
+		}
+	}
+	return nil
 }
 
 func Scan(filename string) (*File, error) {
@@ -213,10 +237,10 @@ func Scan(filename string) (*File, error) {
 		interfaces = append(interfaces, Interfaces(printer, node)...)
 	}
 
-	var constants = make(map[string]Value)
+	var constants []Value
 	for _, node := range file.Decls {
-		for k, v := range Values(printer, node) {
-			constants[k] = v
+		for _, v := range Values(printer, node) {
+			constants = append(constants, v)
 		}
 	}
 
