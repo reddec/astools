@@ -298,6 +298,16 @@ func (f *File) Interface(name string) *Interface {
 	return nil
 }
 
+func (f *File) Struct(name string) *Struct {
+	for _, v := range f.Structs {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
+
 func Scan(filename string) (*File, error) {
 	tokens := token.NewFileSet()
 	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors|parser.ParseComments)
