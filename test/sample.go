@@ -1,3 +1,6 @@
+//
+// Some package description
+//
 package sample
 
 const Greeting = "HEllo!" // Greeting value

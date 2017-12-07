@@ -183,6 +183,7 @@ func (in *Interface) Method(name string) *Method {
 
 type File struct {
 	Package    string
+	Comment    string
 	Imports    map[string]string
 	Values     map[string]Value
 	Interfaces []Interface `json:",omitempty"`
@@ -227,7 +228,6 @@ func Scan(filename string) (*File, error) {
 		}
 		imports[imp.Path.Value] = alias
 	}
-
 	return &File{
 		Package:    file.Name.Name,
 		Printer:    printer,
@@ -235,6 +235,7 @@ func Scan(filename string) (*File, error) {
 		Interfaces: interfaces,
 		Imports:    imports,
 		Values:     constants,
+		Comment:    joinComments(printer.CommentMap[file]),
 	}, nil
 
 }
