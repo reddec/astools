@@ -215,6 +215,15 @@ func (f *File) Value(name string) *Value {
 	return nil
 }
 
+func (f *File) Interface(name string) *Interface {
+	for _, v := range f.Interfaces {
+		if v.Name == name {
+			return &v
+		}
+	}
+	return nil
+}
+
 func Scan(filename string) (*File, error) {
 	tokens := token.NewFileSet()
 	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors|parser.ParseComments)
