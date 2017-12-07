@@ -95,6 +95,32 @@ func (arg *Arg) GolangType() string {
 	return arg.printer.ToString(arg.Type)
 }
 
+type Value struct {
+	Arg
+	Value ast.Expr
+}
+
+func (arg *Value) GolangValue() string {
+	return arg.printer.ToString(arg.Value)
+}
+
+func (u *Value) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Name        string
+		GolangType  string
+		Comment     string `json:",omitempty"`
+		GolangValue string
+		IsError     bool
+	}{
+
+		Name:        u.Name,
+		GolangType:  u.GolangType(),
+		GolangValue: u.GolangValue(),
+		Comment:     u.Comment,
+		IsError:     u.IsError(),
+	})
+}
+
 type Method struct {
 	Name    string
 	Comment string `json:",omitempty"`
@@ -157,10 +183,11 @@ func (in *Interface) Method(name string) *Method {
 
 type File struct {
 	Package    string
-	Imports    map[string]string `json:",omitempty"`
-	Interfaces []Interface       `json:",omitempty"`
-	Structs    []Struct          `json:",omitempty"`
-	Printer    *Printer          `json:"-"`
+	Imports    map[string]string
+	Values     map[string]Value
+	Interfaces []Interface `json:",omitempty"`
+	Structs    []Struct    `json:",omitempty"`
+	Printer    *Printer    `json:"-"`
 }
 
 func Scan(filename string) (*File, error) {
@@ -185,6 +212,13 @@ func Scan(filename string) (*File, error) {
 		interfaces = append(interfaces, Interfaces(printer, node)...)
 	}
 
+	var constants = make(map[string]Value)
+	for _, node := range file.Decls {
+		for k, v := range Values(printer, node) {
+			constants[k] = v
+		}
+	}
+
 	imports := make(map[string]string)
 	for _, imp := range file.Imports {
 		alias := ""
@@ -193,12 +227,14 @@ func Scan(filename string) (*File, error) {
 		}
 		imports[imp.Path.Value] = alias
 	}
+
 	return &File{
 		Package:    file.Name.Name,
 		Printer:    printer,
 		Structs:    structs,
 		Interfaces: interfaces,
 		Imports:    imports,
+		Values:     constants,
 	}, nil
 
 }
@@ -246,6 +282,37 @@ func Interfaces(printer *Printer, decls ...ast.Node) []Interface {
 				iface.Methods = append(iface.Methods, AsMethod(m, printer))
 			}
 			res = append(res, iface)
+		case *ast.GenDecl:
+			lastComment = joinComments(printer.CommentMap[v])
+			for _, spec := range v.Specs {
+				stack = append(stack, spec)
+			}
+		}
+	}
+	return res
+}
+
+func Values(printer *Printer, decls ...ast.Node) map[string]Value {
+	var res = make(map[string]Value)
+	var stack []ast.Node
+	//var name string
+	for i := len(decls) - 1; i >= 0; i-- {
+		stack = append(stack, decls[i])
+	}
+	var lastComment string
+	for len(stack) > 0 {
+		node := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+
+		switch v := node.(type) {
+		case *ast.ValueSpec:
+			val := Value{}
+			val.Name = v.Names[0].Name
+			val.Type = v.Type
+			val.Value = v.Values[0] // TODO: check for bounds
+			val.printer = printer
+			val.Comment = lastComment
+			res[val.Name] = val
 		case *ast.GenDecl:
 			lastComment = joinComments(printer.CommentMap[v])
 			for _, spec := range v.Specs {

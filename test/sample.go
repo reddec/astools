@@ -1,5 +1,7 @@
 package sample
 
+const Greeting = "HEllo!" // Greeting value
+
 // BBBBBBBBBBB
 type Fuel struct {
 	Type   string
