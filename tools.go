@@ -12,12 +12,12 @@ import (
 type Struct struct {
 	Name       string
 	Comment    string          `json:",omitempty"`
-	Fields     []Arg
+	Fields     []*Arg
 	Definition *ast.StructType `json:"-"`
 	printer    *Printer        `json:"-"`
 }
 
-func StructsFile(filename string) ([]Struct, *Printer, error) {
+func StructsFile(filename string) ([]*Struct, *Printer, error) {
 	tokens := token.NewFileSet()
 	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors|parser.ParseComments)
 	if err != nil {
@@ -28,15 +28,15 @@ func StructsFile(filename string) ([]Struct, *Printer, error) {
 		return nil, nil, err
 	}
 	printer := &Printer{string(content), ast.NewCommentMap(tokens, file, file.Comments)}
-	var res []Struct
+	var res []*Struct
 	for _, node := range file.Decls {
 		res = append(res, Structs(printer, node)...)
 	}
 	return res, printer, nil
 }
 
-func Structs(printer *Printer, decls ...ast.Node) []Struct {
-	var res []Struct
+func Structs(printer *Printer, decls ...ast.Node) []*Struct {
+	var res []*Struct
 	var stack []ast.Node
 	var name string
 	for i := len(decls) - 1; i >= 0; i-- {
@@ -53,7 +53,7 @@ func Structs(printer *Printer, decls ...ast.Node) []Struct {
 			name = v.Name.Name
 			stack = append(stack, v.Type)
 		case *ast.StructType:
-			res = append(res, Struct{name, lastComment, getArgs(printer, v.Fields.List), v, printer,})
+			res = append(res, &Struct{name, lastComment, getArgs(printer, v.Fields.List), v, printer,})
 		case *ast.GenDecl:
 			lastComment = joinComments(printer.CommentMap[v])
 			for _, spec := range v.Specs {
@@ -86,6 +86,80 @@ func (u *Arg) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (arg *Arg) IsSimple() bool {
+	v, ok := arg.Type.(*ast.Ident)
+	if ok {
+		switch(v.Name) {
+		case "byte", "rune", "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint64", "string", "bool", "float32", "float64":
+			return true
+		}
+	}
+	return false
+}
+
+func (arg *Arg) IsInteger() bool {
+	v, ok := arg.Type.(*ast.Ident)
+	if ok {
+		switch(v.Name) {
+		case "byte", "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint64":
+			return true
+		}
+	}
+	return false
+}
+
+func (arg *Arg) IsFloat() bool {
+	v, ok := arg.Type.(*ast.Ident)
+	if ok {
+		switch(v.Name) {
+		case "float32", "float64":
+			return true
+		}
+	}
+	return false
+}
+
+func (arg *Arg) IsString() bool {
+	v, ok := arg.Type.(*ast.Ident)
+	if ok {
+		switch(v.Name) {
+		case "string":
+			return true
+		}
+	}
+	return false
+}
+
+func (arg *Arg) IsBoolean() bool {
+	v, ok := arg.Type.(*ast.Ident)
+	if ok {
+		switch(v.Name) {
+		case "bool":
+			return true
+		}
+	}
+	return false
+}
+func (arg *Arg) IsArray() bool {
+	_, ok := arg.Type.(*ast.ArrayType)
+	return ok
+}
+func (arg *Arg) ArrayItem() *Arg {
+	v, ok := arg.Type.(*ast.ArrayType)
+	if !ok {
+		return nil
+	}
+	return &Arg{
+		Name:    "",
+		Type:    v.Elt,
+		Comment: "",
+		printer: arg.printer,
+	}
+}
+func (arg *Arg) IsMap() bool {
+	_, ok := arg.Type.(*ast.MapType)
+	return ok
+}
 func (arg *Arg) IsError() bool {
 	v, ok := arg.Type.(*ast.Ident)
 	return ok && v.Name == "error"
@@ -136,8 +210,8 @@ func (arg *Value) GolangType() string {
 type Method struct {
 	Name    string
 	Comment string `json:",omitempty"`
-	In      []Arg  `json:",omitempty"`
-	Out     []Arg  `json:",omitempty"`
+	In      []*Arg  `json:",omitempty"`
+	Out     []*Arg  `json:",omitempty"`
 }
 
 func (m *Method) HasInput() bool {
@@ -148,8 +222,8 @@ func (m *Method) HasOutput() bool {
 	return len(m.Out) > 0
 }
 
-func (m *Method) ErrorOutputs() []Arg {
-	var args []Arg
+func (m *Method) ErrorOutputs() []*Arg {
+	var args []*Arg
 	for _, arg := range m.Out {
 		if arg.IsError() {
 			args = append(args, arg)
@@ -158,8 +232,8 @@ func (m *Method) ErrorOutputs() []Arg {
 	return args
 }
 
-func (m *Method) NonErrorOutputs() []Arg {
-	var args []Arg
+func (m *Method) NonErrorOutputs() []*Arg {
+	var args []*Arg
 	for _, arg := range m.Out {
 		if !arg.IsError() {
 			args = append(args, arg)
@@ -170,7 +244,7 @@ func (m *Method) NonErrorOutputs() []Arg {
 
 type Interface struct {
 	Name       string
-	Methods    []Method           `json:",omitempty"`
+	Methods    []*Method           `json:",omitempty"`
 	Comment    string             `json:",omitempty"`
 	Definition *ast.InterfaceType `json:"-"`
 }
@@ -190,7 +264,7 @@ func (p *Printer) ToString(node ast.Node) string {
 func (in *Interface) Method(name string) *Method {
 	for _, m := range in.Methods {
 		if m.Name == name {
-			return &m
+			return m
 		}
 	}
 	return nil
@@ -200,16 +274,16 @@ type File struct {
 	Package    string
 	Comment    string
 	Imports    map[string]string
-	Values     []Value
-	Interfaces []Interface `json:",omitempty"`
-	Structs    []Struct    `json:",omitempty"`
+	Values     []*Value
+	Interfaces []*Interface `json:",omitempty"`
+	Structs    []*Struct    `json:",omitempty"`
 	Printer    *Printer    `json:"-"`
 }
 
 func (f *File) Value(name string) *Value {
 	for _, v := range f.Values {
 		if v.Name == name {
-			return &v
+			return v
 		}
 	}
 	return nil
@@ -218,7 +292,7 @@ func (f *File) Value(name string) *Value {
 func (f *File) Interface(name string) *Interface {
 	for _, v := range f.Interfaces {
 		if v.Name == name {
-			return &v
+			return v
 		}
 	}
 	return nil
@@ -237,16 +311,16 @@ func Scan(filename string) (*File, error) {
 
 	printer := &Printer{string(content), ast.NewCommentMap(tokens, file, file.Comments)}
 
-	var structs []Struct
+	var structs []*Struct
 	for _, node := range file.Decls {
 		structs = append(structs, Structs(printer, node)...)
 	}
-	var interfaces []Interface
+	var interfaces []*Interface
 	for _, node := range file.Decls {
 		interfaces = append(interfaces, Interfaces(printer, node)...)
 	}
 
-	var constants []Value
+	var constants []*Value
 	for _, node := range file.Decls {
 		for _, v := range Values(printer, node) {
 			constants = append(constants, v)
@@ -273,7 +347,7 @@ func Scan(filename string) (*File, error) {
 
 }
 
-func InterfacesFile(filename string) ([]Interface, *Printer, error) {
+func InterfacesFile(filename string) ([]*Interface, *Printer, error) {
 	tokens := token.NewFileSet()
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -284,15 +358,15 @@ func InterfacesFile(filename string) ([]Interface, *Printer, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	var res []Interface
+	var res []*Interface
 	for _, node := range file.Decls {
 		res = append(res, Interfaces(printer, node)...)
 	}
 	return res, printer, nil
 }
 
-func Interfaces(printer *Printer, decls ...ast.Node) []Interface {
-	var res []Interface
+func Interfaces(printer *Printer, decls ...ast.Node) []*Interface {
+	var res []*Interface
 	var stack []ast.Node
 	var name string
 	for i := len(decls) - 1; i >= 0; i-- {
@@ -307,7 +381,7 @@ func Interfaces(printer *Printer, decls ...ast.Node) []Interface {
 			name = v.Name.Name
 			stack = append(stack, v.Type)
 		case *ast.InterfaceType:
-			iface := Interface{Name: name, Definition: v, Comment: lastComment}
+			iface := &Interface{Name: name, Definition: v, Comment: lastComment}
 			for _, m := range v.Methods.List {
 				// skip anonym method - in progress
 				if len(m.Names) == 0 {
@@ -326,8 +400,8 @@ func Interfaces(printer *Printer, decls ...ast.Node) []Interface {
 	return res
 }
 
-func Values(printer *Printer, decls ...ast.Node) map[string]Value {
-	var res = make(map[string]Value)
+func Values(printer *Printer, decls ...ast.Node) map[string]*Value {
+	var res = make(map[string]*Value)
 	var stack []ast.Node
 	//var name string
 	for i := len(decls) - 1; i >= 0; i-- {
@@ -340,7 +414,7 @@ func Values(printer *Printer, decls ...ast.Node) map[string]Value {
 
 		switch v := node.(type) {
 		case *ast.ValueSpec:
-			val := Value{}
+			val := &Value{}
 			val.Name = v.Names[0].Name
 			val.Type = v.Type
 			val.Value = v.Values[0] // TODO: check for bounds
@@ -357,10 +431,10 @@ func Values(printer *Printer, decls ...ast.Node) map[string]Value {
 	return res
 }
 
-func AsMethod(m *ast.Field, printer *Printer) Method {
+func AsMethod(m *ast.Field, printer *Printer) *Method {
 	var name string
 	name = m.Names[0].Name
-	method := Method{Name: name, Comment: joinComments(printer.CommentMap[m])}
+	method := &Method{Name: name, Comment: joinComments(printer.CommentMap[m])}
 	def := m.Type.(*ast.FuncType)
 	if def.Params != nil {
 		method.In = getArgs(printer, def.Params.List)
@@ -371,21 +445,21 @@ func AsMethod(m *ast.Field, printer *Printer) Method {
 			if p.Names != nil {
 				name = p.Names[0].Name
 			}
-			method.Out = append(method.Out, Arg{name, p.Type, joinComments(printer.CommentMap[p]), printer})
+			method.Out = append(method.Out, &Arg{name, p.Type, joinComments(printer.CommentMap[p]), printer})
 		}
 	}
 	return method
 }
 
-func getArgs(printer *Printer, fields []*ast.Field) []Arg {
-	var ans []Arg
+func getArgs(printer *Printer, fields []*ast.Field) []*Arg {
+	var ans []*Arg
 	for i, p := range fields {
 		if p.Names != nil {
 			for _, name := range p.Names {
-				ans = append(ans, Arg{name.Name, p.Type, joinComments(printer.CommentMap[p]), printer})
+				ans = append(ans, &Arg{name.Name, p.Type, joinComments(printer.CommentMap[p]), printer})
 			}
 		} else {
-			ans = append(ans, Arg{fmt.Sprintf("arg%v", i), p.Type, joinComments(printer.CommentMap[p]), printer})
+			ans = append(ans, &Arg{fmt.Sprintf("arg%v", i), p.Type, joinComments(printer.CommentMap[p]), printer})
 		}
 	}
 	return ans

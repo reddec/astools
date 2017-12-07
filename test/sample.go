@@ -25,6 +25,7 @@ type Rocket struct {
 	}
 	Tank Fuel
 	V    []int
+	D    map[int]string
 }
 
 // Control?

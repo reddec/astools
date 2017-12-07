@@ -71,5 +71,5 @@ func ExampleStructsFile() {
 	}
 	// Output:
 	// Fuel 2
-	// Rocket 5
+	// Rocket 6
 }
