@@ -210,8 +210,8 @@ func (arg *Value) GolangType() string {
 type Method struct {
 	Name    string
 	Comment string `json:",omitempty"`
-	In      []*Arg  `json:",omitempty"`
-	Out     []*Arg  `json:",omitempty"`
+	In      []*Arg `json:",omitempty"`
+	Out     []*Arg `json:",omitempty"`
 }
 
 func (m *Method) HasInput() bool {
@@ -244,7 +244,7 @@ func (m *Method) NonErrorOutputs() []*Arg {
 
 type Interface struct {
 	Name       string
-	Methods    []*Method           `json:",omitempty"`
+	Methods    []*Method          `json:",omitempty"`
 	Comment    string             `json:",omitempty"`
 	Definition *ast.InterfaceType `json:"-"`
 }
@@ -277,7 +277,19 @@ type File struct {
 	Values     []*Value
 	Interfaces []*Interface `json:",omitempty"`
 	Structs    []*Struct    `json:",omitempty"`
-	Printer    *Printer    `json:"-"`
+	Printer    *Printer     `json:"-"`
+}
+
+func (f *File) WithImports(names ... string) map[string]string {
+	var res = make(map[string]string)
+	for path, alias := range f.Imports {
+		res[path] = alias
+	}
+	for _, name := range names {
+		name = "\"" + name + "\""
+		res[name] = ""
+	}
+	return res
 }
 
 func (f *File) Value(name string) *Value {
@@ -306,7 +318,6 @@ func (f *File) Struct(name string) *Struct {
 	}
 	return nil
 }
-
 
 func Scan(filename string) (*File, error) {
 	tokens := token.NewFileSet()
