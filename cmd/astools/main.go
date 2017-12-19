@@ -95,7 +95,7 @@ func main() {
 					}
 				}
 				target := path.Join(*genOutput, filepath.Base(fileName))
-				err = ioutil.WriteFile(target, (out.(*bytes.Buffer)).Bytes(), 755)
+				err = ioutil.WriteFile(target, (out.(*bytes.Buffer)).Bytes(), 0755)
 				if err != nil {
 					log.Fatal("save to", target, ":", err)
 				}
@@ -103,7 +103,7 @@ func main() {
 		}
 		if *genOutput != "" && *genCopy {
 			target := path.Join(*genOutput, filepath.Base(*genGoFile))
-			err = ioutil.WriteFile(target, []byte(data.Printer.Src), 755)
+			err = ioutil.WriteFile(target, []byte(data.Printer.Src), 0755)
 			if err != nil {
 				log.Fatal("copy to", target, ":", err)
 			}
