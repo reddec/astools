@@ -18,6 +18,8 @@ import (
 
 func main() {
 	dump := kingpin.Command("dump", "Dump source AST to JSON")
+	dumpFilter := dump.Flag("filter", "Filter output (used name flag)").Short('f').Default("all").Enum("all", "struct", "interface", "value")
+	dumpFilterName := dump.Flag("filter-name", "Filter name").Short('n').String()
 	dumpGoFile := dump.Arg("input-file", "Input .go file").Required().String()
 
 	gen := kingpin.Command("gen", "Generate result base on template, env variables and source go file")
@@ -33,11 +35,27 @@ func main() {
 		if err != nil {
 			log.Fatal("scan:", err)
 		}
-		bytes, err := json.MarshalIndent(data, "", "  ")
+
+		var res interface{} = data
+
+		switch *dumpFilter {
+		case "struct":
+			res = data.Struct(*dumpFilterName)
+		case "interface":
+			res = data.Interface(*dumpFilterName)
+		case "value":
+			res = data.Value(*dumpFilterName)
+		case "all":
+			res = data
+		default:
+			log.Fatal("unknown filter mode:", *dumpFilter)
+		}
+
+		dump, err := json.MarshalIndent(res, "", "  ")
 		if err != nil {
 			log.Fatal("marshall:", err)
 		}
-		os.Stdout.Write(bytes)
+		os.Stdout.Write(dump)
 	case "gen":
 		data, err := atool.Scan(*genGoFile)
 		if err != nil {
