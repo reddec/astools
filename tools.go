@@ -226,7 +226,7 @@ func (file *File) ExtractTypeString(tp string) (*Struct, error) {
 				return nil, errors.Wrapf(err, "scan source %v", fileName)
 			}
 			if alias != "_" && nxtFile.Package == tpPkg {
-				tp, err := nxtFile.ExtractType(tp)
+				tp, err := nxtFile.ExtractTypeString(tp)
 				if err == nil {
 					return tp, nil
 				}
