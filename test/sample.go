@@ -3,6 +3,8 @@
 //
 package sample
 
+import "github.com/shopspring/decimal"
+
 const Greeting = "HEllo!" // Greeting value
 
 // BBBBBBBBBBB
@@ -36,4 +38,8 @@ type Control interface {
 	Aircraft() (*Rocket)
 
 	Launch(rocket *Rocket) (bool, error)
+}
+
+type Fs interface {
+	Call(val decimal.Decimal)
 }

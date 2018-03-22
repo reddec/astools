@@ -7,6 +7,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"github.com/pkg/errors"
 )
 
 type Struct struct {
@@ -15,6 +19,7 @@ type Struct struct {
 	Fields     []*Arg
 	Definition *ast.StructType `json:"-"`
 	printer    *Printer        `json:"-"`
+	File       *File           `json:"-"`
 }
 
 func StructsFile(filename string) ([]*Struct, *Printer, error) {
@@ -53,7 +58,7 @@ func Structs(printer *Printer, decls ...ast.Node) []*Struct {
 			name = v.Name.Name
 			stack = append(stack, v.Type)
 		case *ast.StructType:
-			res = append(res, &Struct{name, lastComment, getArgs(printer, v.Fields.List), v, printer,})
+			res = append(res, &Struct{name, lastComment, getArgs(printer, v.Fields.List), v, printer, nil})
 		case *ast.GenDecl:
 			lastComment = joinComments(printer.CommentMap[v])
 			for _, spec := range v.Specs {
@@ -163,6 +168,60 @@ func (arg *Arg) IsMap() bool {
 func (arg *Arg) IsError() bool {
 	v, ok := arg.Type.(*ast.Ident)
 	return ok && v.Name == "error"
+}
+func (file *File) ExtractType(tp *ast.Expr) (*Struct, error) {
+	return file.ExtractTypeString(file.Printer.ToString(tp))
+}
+func (file *File) ExtractTypeString(tp string) (*Struct, error) {
+	tp = strings.Replace(tp, "*", "", -1)
+
+	for _, s := range file.Structs {
+		if s.Name == tp {
+			return s, nil
+		}
+	}
+	tpPkg := "_"
+
+	sp := strings.Split(tp, ".")
+	if len(sp) > 1 {
+		tpPkg = sp[0]
+		tp = sp[1]
+	}
+	for imp, alias := range file.Imports {
+
+		if alias != tpPkg && alias != "" {
+			continue
+		}
+		imp = strings.Replace(imp, "\"", "", -1)
+		localPath := filepath.Join(os.Getenv("GOPATH"), "src", imp)
+		files, err := ioutil.ReadDir(localPath)
+		if err != nil {
+			return nil, errors.Wrapf(err, "scan dir %v", localPath)
+		}
+		for _, fileInfo := range files {
+			if fileInfo.IsDir() {
+				continue
+			}
+			fileName := filepath.Join(localPath, fileInfo.Name())
+			if !strings.HasSuffix(fileName, ".go") {
+				continue
+			}
+			if strings.HasSuffix(fileName, "_test.go") {
+				continue
+			}
+			nxtFile, err := Scan(fileName)
+			if err != nil {
+				return nil, errors.Wrapf(err, "scan source %v", fileName)
+			}
+			if alias != "_" && nxtFile.Package == tpPkg {
+				tp, err := nxtFile.ExtractType(tp)
+				if err == nil {
+					return tp, nil
+				}
+			}
+		}
+	}
+	return nil, errors.New("type " + tp + " can't be extracted")
 }
 
 func (arg *Arg) GolangType() string {
@@ -336,6 +395,7 @@ func Scan(filename string) (*File, error) {
 	for _, node := range file.Decls {
 		structs = append(structs, Structs(printer, node)...)
 	}
+
 	var interfaces []*Interface
 	for _, node := range file.Decls {
 		interfaces = append(interfaces, Interfaces(printer, node)...)
@@ -356,7 +416,7 @@ func Scan(filename string) (*File, error) {
 		}
 		imports[imp.Path.Value] = alias
 	}
-	return &File{
+	fs := &File{
 		Package:    file.Name.Name,
 		Printer:    printer,
 		Structs:    structs,
@@ -364,7 +424,11 @@ func Scan(filename string) (*File, error) {
 		Imports:    imports,
 		Values:     constants,
 		Comment:    joinComments(printer.CommentMap[file]),
-	}, nil
+	}
+	for _, st := range fs.Structs {
+		st.File = fs
+	}
+	return fs, nil
 
 }
 

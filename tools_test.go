@@ -60,6 +60,15 @@ func TestInterfacesFile(t *testing.T) {
 	assert.True(t, args[1].IsError())
 }
 
+func TestFile_ExtractType(t *testing.T) {
+	f, err := Scan("test/sample.go")
+	assert.Nil(t, err)
+	tp := f.Interface("Fs").Method("Call").In[0]
+	ex, err := f.ExtractTypeString(tp.GolangType())
+	assert.Nil(t, err)
+	t.Log(ex.printer.ToString(ex.Definition))
+}
+
 func ExampleStructsFile() {
 	// Print structs and fields count in file
 	structs, _, err := StructsFile("test/sample.go")
