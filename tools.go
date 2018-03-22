@@ -514,7 +514,9 @@ func Values(printer *Printer, decls ...ast.Node) map[string]*Value {
 			val := &Value{}
 			val.Name = v.Names[0].Name
 			val.Type = v.Type
-			val.Value = v.Values[0] // TODO: check for bounds
+			if len(v.Values) > 0 {
+				val.Value = v.Values[0] // TODO: check for bounds
+			}
 			val.printer = printer
 			val.Comment = lastComment
 			res[val.Name] = val
