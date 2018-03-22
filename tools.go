@@ -76,6 +76,14 @@ type Arg struct {
 	printer *Printer
 }
 
+func (u *Arg) GoPkgType() (string, string) {
+	v := strings.Split(u.GolangType(), ".")
+	if len(v) > 1 {
+		return v[0], v[1]
+	}
+	return "", v[0]
+}
+
 func (u *Arg) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Name       string
