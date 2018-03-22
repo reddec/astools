@@ -22,6 +22,10 @@ type Struct struct {
 	File       *File           `json:"-"`
 }
 
+func (s *Struct) GoLang() string {
+	return "type " + s.Name + " " + s.printer.ToString(s.Definition)
+}
+
 func StructsFile(filename string) ([]*Struct, *Printer, error) {
 	tokens := token.NewFileSet()
 	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors|parser.ParseComments)
