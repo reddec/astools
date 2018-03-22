@@ -177,7 +177,7 @@ func (arg *Arg) IsError() bool {
 	v, ok := arg.Type.(*ast.Ident)
 	return ok && v.Name == "error"
 }
-func (file *File) ExtractType(tp *ast.Expr) (*Struct, error) {
+func (file *File) ExtractType(tp ast.Expr) (*Struct, error) {
 	return file.ExtractTypeString(file.Printer.ToString(tp))
 }
 func (file *File) ExtractTypeString(tp string) (*Struct, error) {
