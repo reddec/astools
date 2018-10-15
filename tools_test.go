@@ -75,6 +75,11 @@ func TestFile_ExtractType(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, tp.IsPointer())
 	assert.Equal(t, "bytes", ex.File.Import)
+
+	tp = f.Interface("Fs").Method("Call").In[2]
+	ex, err = f.ExtractTypeString(tp.GolangType())
+	assert.Nil(t, err)
+	assert.Equal(t, "test/ext.go", ex.File.location)
 }
 
 func ExampleStructsFile() {

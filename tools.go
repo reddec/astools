@@ -197,6 +197,7 @@ func (file *File) ExtractTypeString(tp string) (*Struct, error) {
 			return s, nil
 		}
 	}
+
 	tpPkg := "_"
 
 	sp := strings.Split(tp, ".")
@@ -204,6 +205,36 @@ func (file *File) ExtractTypeString(tp string) (*Struct, error) {
 		tpPkg = sp[0]
 		tp = sp[1]
 	}
+	if tpPkg == "_" && file.near == nil {
+		dirName := filepath.Dir(file.location)
+		dir, err := ioutil.ReadDir(dirName)
+		if err != nil {
+			return nil, err
+		}
+		for _, fileName := range dir {
+			if fileName.IsDir() {
+				continue
+			}
+			if filepath.Ext(fileName.Name()) == ".go" {
+				childFile, err := Scan(filepath.Join(dirName, fileName.Name()))
+				if err != nil {
+					return nil, err
+				}
+				file.near = append(file.near, childFile)
+				// on-fly check type
+				if s := childFile.Struct(tp); s != nil {
+					return s, nil
+				}
+			}
+		}
+	} else if tpPkg == "_" {
+		for _, childFile := range file.near {
+			if s := childFile.Struct(tp); s != nil {
+				return s, nil
+			}
+		}
+	}
+
 	for imp, alias := range file.Imports {
 
 		if alias != tpPkg && alias != "" {
@@ -366,7 +397,11 @@ type File struct {
 	Interfaces []*Interface `json:",omitempty"`
 	Structs    []*Struct    `json:",omitempty"`
 	Printer    *Printer     `json:"-"`
+	near       []*File // files in the same directory
+	location   string
 }
+
+func (f *File) Location() string { return f.location }
 
 func (f *File) WithImports(names ... string) map[string]string {
 	var res = make(map[string]string)
@@ -453,12 +488,12 @@ func Scan(filename string) (*File, error) {
 		Imports:    imports,
 		Values:     constants,
 		Comment:    joinComments(printer.CommentMap[file]),
+		location:   filename,
 	}
 	for _, st := range fs.Structs {
 		st.File = fs
 	}
 	return fs, nil
-
 }
 
 func InterfacesFile(filename string) ([]*Interface, *Printer, error) {

@@ -44,5 +44,5 @@ type Control interface {
 }
 
 type Fs interface {
-	Call(val decimal.Decimal, buffer *bytes.Buffer)
+	Call(val decimal.Decimal, buffer *bytes.Buffer, sm SampleData)
 }
