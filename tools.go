@@ -1,21 +1,21 @@
 package atool
 
 import (
+	"encoding/json"
+	"fmt"
+	"github.com/pkg/errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"fmt"
 	"io/ioutil"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
-	"github.com/pkg/errors"
 )
 
 type Struct struct {
 	Name       string
-	Comment    string          `json:",omitempty"`
+	Comment    string `json:",omitempty"`
 	Fields     []*Arg
 	Definition *ast.StructType `json:"-"`
 	printer    *Printer        `json:"-"`
@@ -106,7 +106,7 @@ func (u *Arg) MarshalJSON() ([]byte, error) {
 func (arg *Arg) IsSimple() bool {
 	v, ok := arg.Type.(*ast.Ident)
 	if ok {
-		switch(v.Name) {
+		switch (v.Name) {
 		case "byte", "rune", "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint64", "string", "bool", "float32", "float64":
 			return true
 		}
@@ -117,7 +117,7 @@ func (arg *Arg) IsSimple() bool {
 func (arg *Arg) IsInteger() bool {
 	v, ok := arg.Type.(*ast.Ident)
 	if ok {
-		switch(v.Name) {
+		switch (v.Name) {
 		case "byte", "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint64":
 			return true
 		}
@@ -128,7 +128,7 @@ func (arg *Arg) IsInteger() bool {
 func (arg *Arg) IsFloat() bool {
 	v, ok := arg.Type.(*ast.Ident)
 	if ok {
-		switch(v.Name) {
+		switch (v.Name) {
 		case "float32", "float64":
 			return true
 		}
@@ -139,7 +139,7 @@ func (arg *Arg) IsFloat() bool {
 func (arg *Arg) IsString() bool {
 	v, ok := arg.Type.(*ast.Ident)
 	if ok {
-		switch(v.Name) {
+		switch (v.Name) {
 		case "string":
 			return true
 		}
@@ -150,7 +150,7 @@ func (arg *Arg) IsString() bool {
 func (arg *Arg) IsBoolean() bool {
 	v, ok := arg.Type.(*ast.Ident)
 	if ok {
-		switch(v.Name) {
+		switch (v.Name) {
 		case "bool":
 			return true
 		}
@@ -226,6 +226,7 @@ func (file *File) ExtractTypeString(tp string) (*Struct, error) {
 				return nil, errors.Wrapf(err, "scan source %v", fileName)
 			}
 			if alias != "_" && nxtFile.Package == tpPkg {
+				nxtFile.Import = imp
 				tp, err := nxtFile.ExtractTypeString(tp)
 				if err == nil {
 					return tp, nil
@@ -329,7 +330,7 @@ func (p *Printer) ToString(node ast.Node) string {
 	if node == nil {
 		return ""
 	}
-	return p.Src[node.Pos()-1:node.End()-1]
+	return p.Src[node.Pos()-1 : node.End()-1]
 }
 
 func (in *Interface) Method(name string) *Method {
@@ -342,6 +343,7 @@ func (in *Interface) Method(name string) *Method {
 }
 
 type File struct {
+	Import     string // optional field
 	Package    string
 	Comment    string
 	Imports    map[string]string

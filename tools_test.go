@@ -1,10 +1,10 @@
 package atool
 
 import (
-	"testing"
-	"github.com/alecthomas/assert"
 	"fmt"
+	"github.com/alecthomas/assert"
 	"os"
+	"testing"
 )
 
 func TestStructsFile(t *testing.T) {
@@ -67,6 +67,7 @@ func TestFile_ExtractType(t *testing.T) {
 	ex, err := f.ExtractTypeString(tp.GolangType())
 	assert.Nil(t, err)
 	t.Log(ex.printer.ToString(ex.Definition))
+	assert.Equal(t, "github.com/shopspring/decimal", ex.File.Import)
 }
 
 func ExampleStructsFile() {
