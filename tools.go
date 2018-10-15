@@ -220,6 +220,7 @@ func (file *File) ExtractTypeString(tp string) (*Struct, error) {
 				if err != nil {
 					return nil, err
 				}
+				childFile.Import = file.Import
 				file.near = append(file.near, childFile)
 				// on-fly check type
 				if s := childFile.Struct(tp); s != nil {
