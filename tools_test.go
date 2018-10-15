@@ -68,6 +68,11 @@ func TestFile_ExtractType(t *testing.T) {
 	assert.Nil(t, err)
 	t.Log(ex.printer.ToString(ex.Definition))
 	assert.Equal(t, "github.com/shopspring/decimal", ex.File.Import)
+
+	tp = f.Interface("Fs").Method("Call").In[1]
+	ex, err = f.ExtractTypeString(tp.GolangType())
+	assert.Nil(t, err)
+	assert.Equal(t, "bytes", ex.File.Import)
 }
 
 func ExampleStructsFile() {

@@ -205,8 +205,18 @@ func (file *File) ExtractTypeString(tp string) (*Struct, error) {
 			continue
 		}
 		imp = strings.Replace(imp, "\"", "", -1)
-		localPath := filepath.Join(os.Getenv("GOPATH"), "src", imp)
+		var localPath string
+		for _, fileOptions := range []string{filepath.Join(os.Getenv("GOPATH"), "src", imp), filepath.Join(os.Getenv("GOROOT"), "src", imp)} {
+			if st, err := os.Lstat(fileOptions); err == nil && st.IsDir() {
+				localPath = fileOptions
+				break
+			}
+		}
+		if localPath == "" {
+			return nil, errors.Errorf("import %v not found", imp)
+		}
 		files, err := ioutil.ReadDir(localPath)
+
 		if err != nil {
 			return nil, errors.Wrapf(err, "scan dir %v", localPath)
 		}

@@ -3,7 +3,10 @@
 //
 package sample
 
-import "github.com/shopspring/decimal"
+import (
+	"bytes"
+	"github.com/shopspring/decimal"
+)
 
 const Greeting = "HEllo!" // Greeting value
 
@@ -41,5 +44,5 @@ type Control interface {
 }
 
 type Fs interface {
-	Call(val decimal.Decimal)
+	Call(val decimal.Decimal, buffer bytes.Buffer)
 }
