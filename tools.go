@@ -103,6 +103,11 @@ func (u *Arg) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (arg *Arg) IsPointer() bool {
+	_, ok := arg.Type.(*ast.StarExpr)
+	return ok
+}
+
 func (arg *Arg) IsSimple() bool {
 	v, ok := arg.Type.(*ast.Ident)
 	if ok {
