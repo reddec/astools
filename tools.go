@@ -189,6 +189,29 @@ func (arg *Arg) IsError() bool {
 func (file *File) ExtractType(tp ast.Expr) (*Struct, error) {
 	return file.ExtractTypeString(file.Printer.ToString(tp))
 }
+
+func findVendorDir(dir string) string {
+	vendorDir := filepath.Join(dir, "vendor")
+	st, err := os.Stat(vendorDir)
+	if !os.IsNotExist(err) && err != nil {
+		return ""
+	} else if err == nil && st.IsDir() {
+		pth, err := filepath.Abs(vendorDir)
+		if err != nil {
+			panic(err)
+		}
+		return pth
+	}
+	up, err := filepath.Abs(filepath.Join(dir, ".."))
+	if err != nil {
+		panic(err)
+	}
+	if up == dir {
+		return ""
+	}
+	return findVendorDir(up)
+}
+
 func (file *File) ExtractTypeString(tp string) (*Struct, error) {
 	tp = strings.Replace(tp, "*", "", -1)
 
@@ -242,41 +265,46 @@ func (file *File) ExtractTypeString(tp string) (*Struct, error) {
 			continue
 		}
 		imp = strings.Replace(imp, "\"", "", -1)
-		var localPath string
-		for _, fileOptions := range []string{filepath.Join(os.Getenv("GOPATH"), "src", imp), filepath.Join(os.Getenv("GOROOT"), "src", imp)} {
-			if st, err := os.Lstat(fileOptions); err == nil && st.IsDir() {
-				localPath = fileOptions
-				break
-			}
-		}
-		if localPath == "" {
-			return nil, errors.Errorf("import %v not found", imp)
-		}
-		files, err := ioutil.ReadDir(localPath)
 
-		if err != nil {
-			return nil, errors.Wrapf(err, "scan dir %v", localPath)
-		}
-		for _, fileInfo := range files {
-			if fileInfo.IsDir() {
+		vendorDir := findVendorDir(filepath.Dir(file.location))
+		for _, fileOptions := range []string{filepath.Join(vendorDir, imp), filepath.Join(os.Getenv("GOPATH"), "src", imp), filepath.Join(os.Getenv("GOROOT"), "src", imp)} {
+			var localPath string
+			if fileOptions == "" {
 				continue
 			}
-			fileName := filepath.Join(localPath, fileInfo.Name())
-			if !strings.HasSuffix(fileName, ".go") {
+			if st, err := os.Lstat(fileOptions); err != nil || !st.IsDir() {
 				continue
+			} else {
+				localPath = fileOptions
 			}
-			if strings.HasSuffix(fileName, "_test.go") {
-				continue
-			}
-			nxtFile, err := Scan(fileName)
+			files, err := ioutil.ReadDir(localPath)
+
 			if err != nil {
-				return nil, errors.Wrapf(err, "scan source %v", fileName)
+				return nil, errors.Wrapf(err, "scan dir %v", localPath)
 			}
-			if alias != "_" && nxtFile.Package == tpPkg {
-				nxtFile.Import = imp
-				tp, err := nxtFile.ExtractTypeString(tp)
-				if err == nil {
-					return tp, nil
+
+			for _, fileInfo := range files {
+				if fileInfo.IsDir() {
+					continue
+				}
+				fileName := filepath.Join(localPath, fileInfo.Name())
+
+				if !strings.HasSuffix(fileName, ".go") {
+					continue
+				}
+				if strings.HasSuffix(fileName, "_test.go") {
+					continue
+				}
+				nxtFile, err := Scan(fileName)
+				if err != nil {
+					return nil, errors.Wrapf(err, "scan source %v", fileName)
+				}
+				if alias != "_" && nxtFile.Package == tpPkg {
+					nxtFile.Import = imp
+					tpTp, err := nxtFile.ExtractTypeString(tp)
+					if err == nil {
+						return tpTp, nil
+					}
 				}
 			}
 		}

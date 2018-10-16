@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/alecthomas/assert"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -69,6 +70,8 @@ func TestFile_ExtractType(t *testing.T) {
 	assert.False(t, tp.IsPointer())
 	t.Log(ex.printer.ToString(ex.Definition))
 	assert.Equal(t, "github.com/shopspring/decimal", ex.File.Import)
+	root, _ := filepath.Abs(".")
+	assert.Equal(t, filepath.Join(root, "vendor/github.com/shopspring/decimal/decimal.go"), ex.File.location)
 
 	tp = f.Interface("Fs").Method("Call").In[1]
 	ex, err = f.ExtractTypeString(tp.GolangType())
