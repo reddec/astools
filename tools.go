@@ -26,6 +26,15 @@ func (s *Struct) GoLang() string {
 	return "type " + s.Name + " " + s.printer.ToString(s.Definition)
 }
 
+func (s *Struct) Field(name string) *Arg {
+	for _, f := range s.Fields {
+		if f.Name == name {
+			return f
+		}
+	}
+	return nil
+}
+
 func StructsFile(filename string) ([]*Struct, *Printer, error) {
 	tokens := token.NewFileSet()
 	file, err := parser.ParseFile(tokens, filename, nil, parser.AllErrors|parser.ParseComments)
