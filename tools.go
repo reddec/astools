@@ -87,7 +87,10 @@ type Arg struct {
 	Type    ast.Expr
 	Comment string
 	printer *Printer
+	field   *ast.Field
 }
+
+func (u *Arg) AsField() *ast.Field { return u.field }
 
 func (u *Arg) GoPkgType() (string, string) {
 	v := strings.Split(u.GolangType(), ".")
@@ -634,7 +637,7 @@ func AsMethod(m *ast.Field, printer *Printer) *Method {
 			if p.Names != nil {
 				name = p.Names[0].Name
 			}
-			method.Out = append(method.Out, &Arg{name, p.Type, joinComments(printer.CommentMap[p]), printer})
+			method.Out = append(method.Out, &Arg{name, p.Type, joinComments(printer.CommentMap[p]), printer, p})
 		}
 	}
 	return method
@@ -645,10 +648,10 @@ func getArgs(printer *Printer, fields []*ast.Field) []*Arg {
 	for i, p := range fields {
 		if p.Names != nil {
 			for _, name := range p.Names {
-				ans = append(ans, &Arg{name.Name, p.Type, joinComments(printer.CommentMap[p]), printer})
+				ans = append(ans, &Arg{name.Name, p.Type, joinComments(printer.CommentMap[p]), printer, p})
 			}
 		} else {
-			ans = append(ans, &Arg{fmt.Sprintf("arg%v", i), p.Type, joinComments(printer.CommentMap[p]), printer})
+			ans = append(ans, &Arg{fmt.Sprintf("arg%v", i), p.Type, joinComments(printer.CommentMap[p]), printer, p})
 		}
 	}
 	return ans
