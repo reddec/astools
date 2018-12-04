@@ -1,19 +1,20 @@
 package main
 
 import (
-	"gopkg.in/alecthomas/kingpin.v2"
+	"bytes"
+	"encoding/json"
+	"github.com/Masterminds/sprig"
 	"github.com/reddec/astools"
+	"github.com/reddec/symbols"
+	"gopkg.in/alecthomas/kingpin.v2"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
-	"encoding/json"
-	"text/template"
-	"github.com/Masterminds/sprig"
-	"io/ioutil"
-	"path/filepath"
-	"io"
-	"bytes"
-	"strings"
 	"path"
+	"path/filepath"
+	"strings"
+	"text/template"
 )
 
 func main() {
@@ -28,6 +29,7 @@ func main() {
 	genExt := gen.Flag("ext", "Remove extension for output files").Short('e').Bool()
 	genOutput := gen.Flag("out", "Output folder. If not specified - to stdout").Short('o').String()
 	genCopy := gen.Flag("copy", "Copy original file to output (if specified)").Short('c').Bool()
+	indexSymbols := gen.Flag("index", "Index all symbols during generations (sym func)").Short('I').Bool()
 
 	switch kingpin.Parse() {
 	case "dump":
@@ -61,7 +63,40 @@ func main() {
 		if err != nil {
 			log.Fatal("scan:", err)
 		}
-		templates := template.New("").Funcs(sprig.TxtFuncMap())
+		funcs := sprig.TxtFuncMap()
+		if *indexSymbols {
+			project, err := symbols.ProjectByDir(filepath.Dir(*genGoFile))
+			if err != nil {
+				log.Fatal("index symbols: ", err)
+			}
+			var currentFile *symbols.File
+			for _, f := range project.Package.Files {
+				if filepath.Base(f.Filename) == filepath.Base(*genGoFile) {
+					currentFile = f
+					break
+				}
+			}
+			if currentFile == nil {
+				panic("indexed but not found")
+			}
+			funcs["sym"] = func() *symbols.Project {
+				return project
+			}
+			funcs["symfile"] = func() *symbols.File {
+				return currentFile
+			}
+			funcs["fqdn"] = func(arg *atool.Arg) (string, error) {
+				v, err := project.FindSymbol(arg.GolangType(), currentFile)
+				if err != nil {
+					return "", err
+				}
+				if arg.IsPointer() {
+					return "*" + v.Import.Package + "." + v.Name, nil
+				}
+				return v.Import.Package + "." + v.Name, nil
+			}
+		}
+		templates := template.New("").Funcs(funcs)
 		for _, fileName := range *genTemplFile {
 			templateContent, err := ioutil.ReadFile(fileName)
 			if err != nil {
