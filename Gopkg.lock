@@ -118,11 +118,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6caaa586841b74df149d45324be9b55ab61296bf3e0085d0fdfff59c50d89466"
+  digest = "1:a94c747d1f050c909083d6e11e18b6c0574afdcfff6f7caec21baf19df533a09"
   name = "github.com/reddec/symbols"
   packages = ["."]
   pruneopts = "UT"
-  revision = "317ed68a13c50a880cdbb0cf65551dfff4c66daa"
+  revision = "6df9f095dd2cc8a5f0955d6781955c94ed212bd4"
 
 [[projects]]
   digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"

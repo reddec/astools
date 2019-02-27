@@ -95,6 +95,16 @@ func main() {
 				}
 				return v.Import.Package + "." + v.Name, nil
 			}
+			funcs["symbol"] = func(name string) (*symbols.Symbol, error) {
+				return project.FindLocalSymbol(name)
+			}
+			funcs["fields"] = func(name string) ([]*symbols.Field, error) {
+				sym, err := project.FindLocalSymbol(name)
+				if err != nil {
+					return nil, err
+				}
+				return sym.Fields(project)
+			}
 		}
 		templates := template.New("").Funcs(funcs)
 		for _, fileName := range *genTemplFile {
