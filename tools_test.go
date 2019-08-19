@@ -28,8 +28,11 @@ func TestScan(t *testing.T) {
 	assert.Equal(t, "sample", file.Package)
 	assert.Equal(t, len(file.Structs), 2)
 	assert.Equal(t, "Fuel", file.Structs[0].Name)
+	assert.Len(t, file.Structs[0].Fields, 2)
+	assert.NotEmpty(t, file.Structs[0].Fields[0].Tag)
+	assert.Equal(t, "`json:\"Type\"`",file.Structs[0].Fields[0].Tag)
 	assert.Equal(t, "Rocket", file.Structs[1].Name)
-	assert.Len(t, file.Interfaces, 1)
+	assert.Len(t, file.Interfaces, 2)
 	assert.Equal(t, "Control", file.Interfaces[0].Name)
 	var names []string
 	for _, m := range file.Interfaces[0].Methods {
@@ -43,7 +46,7 @@ func TestScan(t *testing.T) {
 func TestInterfacesFile(t *testing.T) {
 	list, p, err := InterfacesFile("test/sample.go")
 	assert.Nil(t, err)
-	assert.Len(t, list, 1)
+	assert.Len(t, list, 2)
 	assert.Equal(t, "Control", list[0].Name)
 	var names []string
 	for _, m := range list[0].Methods {

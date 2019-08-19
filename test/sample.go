@@ -12,7 +12,7 @@ const Greeting = "HEllo!" // Greeting value
 
 // BBBBBBBBBBB
 type Fuel struct {
-	Type   string
+	Type   string `json:"Type"`
 	Amount float32 //AAAAAAAAA
 }
 

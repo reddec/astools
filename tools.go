@@ -85,6 +85,7 @@ func Structs(printer *Printer, decls ...ast.Node) []*Struct {
 type Arg struct {
 	Name    string
 	Type    ast.Expr
+	Tag     string
 	Comment string
 	printer *Printer
 	field   *ast.Field
@@ -637,7 +638,11 @@ func AsMethod(m *ast.Field, printer *Printer) *Method {
 			if p.Names != nil {
 				name = p.Names[0].Name
 			}
-			method.Out = append(method.Out, &Arg{name, p.Type, joinComments(printer.CommentMap[p]), printer, p})
+			tag := ""
+			if p.Tag != nil {
+				tag = p.Tag.Value
+			}
+			method.Out = append(method.Out, &Arg{name, p.Type, tag, joinComments(printer.CommentMap[p]), printer, p})
 		}
 	}
 	return method
@@ -648,10 +653,14 @@ func getArgs(printer *Printer, fields []*ast.Field) []*Arg {
 	for i, p := range fields {
 		if p.Names != nil {
 			for _, name := range p.Names {
-				ans = append(ans, &Arg{name.Name, p.Type, joinComments(printer.CommentMap[p]), printer, p})
+				tag := ""
+				if p.Tag != nil {
+					tag = p.Tag.Value
+				}
+				ans = append(ans, &Arg{name.Name, p.Type, tag, joinComments(printer.CommentMap[p]), printer, p})
 			}
 		} else {
-			ans = append(ans, &Arg{fmt.Sprintf("arg%v", i), p.Type, joinComments(printer.CommentMap[p]), printer, p})
+			ans = append(ans, &Arg{fmt.Sprintf("arg%v", i), p.Type, "", joinComments(printer.CommentMap[p]), printer, p})
 		}
 	}
 	return ans
