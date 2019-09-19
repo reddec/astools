@@ -22,8 +22,12 @@ github.com/imdario/mergo v0.3.6/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJ
 github.com/mattn/go-isatty v0.0.4/go.mod h1:M+lRXTBqGeGNdLjl/ufCoiOlB5xdOkqRJdNxMWT7Zi4=
 github.com/pkg/errors v0.8.0 h1:WdK/asTD0HN+q6hsWO3/vpuAkAr+tw6aNJNDFFf0+qw=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
+github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/reddec/symbols v0.0.0-20181210131318-6df9f095dd2c h1:588EZfJ4VGkQnA3ePM9+Vu6H+ZeivtZqVTp2tzl8SxY=
 github.com/reddec/symbols v0.0.0-20181210131318-6df9f095dd2c/go.mod h1:ioNo+f1f9s/E5yu43WvTV4pR2xEVwuwTA+BMJZvYNVU=
+github.com/reddec/symbols v0.0.0-20190320134656-1e0352799cb5 h1:CmSvhjJJWgTJb/opFGckrLKT4L2gSXSz3oG0RLtH52c=
+github.com/reddec/symbols v0.0.0-20190320134656-1e0352799cb5/go.mod h1:ioNo+f1f9s/E5yu43WvTV4pR2xEVwuwTA+BMJZvYNVU=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24/go.mod h1:M+9NzErvs504Cn4c5DxATwIqPbtswREoFCre64PpcG4=
 golang.org/x/crypto v0.0.0-20181015023909-0c41d7ab0a0e h1:IzypfodbhbnViNUO/MEh0FzCUooG97cIGfdggUrUSyU=

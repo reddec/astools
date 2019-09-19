@@ -65,7 +65,7 @@ func main() {
 		}
 		funcs := sprig.TxtFuncMap()
 		if *indexSymbols {
-			project, err := symbols.ProjectByDir(filepath.Dir(*genGoFile))
+			project, err := symbols.ProjectByDir(filepath.Dir(*genGoFile), 8192)
 			if err != nil {
 				log.Fatal("index symbols: ", err)
 			}

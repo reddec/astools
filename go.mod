@@ -16,8 +16,8 @@ require (
 	github.com/huandu/xstrings v1.2.0
 	github.com/imdario/mergo v0.3.6
 	github.com/mattn/go-isatty v0.0.4
-	github.com/pkg/errors v0.8.0
-	github.com/reddec/symbols v0.0.0-20181210131318-6df9f095dd2c
+	github.com/pkg/errors v0.8.1
+	github.com/reddec/symbols v0.0.0-20190320134656-1e0352799cb5
 	github.com/sergi/go-diff v1.0.0
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24
 	golang.org/x/crypto v0.0.0-20181015023909-0c41d7ab0a0e
